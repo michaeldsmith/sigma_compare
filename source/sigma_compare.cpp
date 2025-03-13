@@ -29,6 +29,8 @@ void
 dpx_read(char* inname, float** pixels_read, short* width, short* height, short cineon, short half_flag)
 {
   // empty implementation
+  fprintf(stderr, "dpx is not supported\n");
+  exit(1);
   return;
 }
 /***********************************************************************************************************/
