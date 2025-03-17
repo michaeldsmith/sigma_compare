@@ -48,7 +48,8 @@ main(int argc, char **argv)
     int j;
     float *pixels = NULL, *pixels2 = NULL, *pixels3 = NULL;
     int *bin_value = NULL;
-    char infile1[300], infile2[300];
+#define FILEPATH_MAX 300
+    char infile1[FILEPATH_MAX], infile2[FILEPATH_MAX];
     int iframe = 0, first_frame = 0, last_frame = 0;
     int h_reso = 0, v_reso = 0;
     float col[3];
@@ -119,8 +120,8 @@ main(int argc, char **argv)
     } /* c */
     for (iframe = first_frame; iframe <= last_frame; iframe++)
     {
-        sprintf(infile1, argv[1], iframe);
-        sprintf(infile2, argv[2], iframe);
+        snprintf(infile1, sizeof(infile1),argv[1], iframe);
+        snprintf(infile2, sizeof(infile2),argv[2], iframe);
         short num_chars = (short) strlen(infile1);                                                            /* length of in_file_name string */
         if ((!strcmp(&infile1[num_chars - 1], "x")) || (!strcmp(&infile1[num_chars - 1], "X")) ||     /* DPX file ending in ".dpx" (not recommended,
                  10bit linear has insufficient precision near black) */
@@ -164,12 +165,12 @@ main(int argc, char **argv)
                 h_reso = dw.max.x - dw.min.x + 1;
                 v_reso = dw.max.y - dw.min.y + 1;
                 half_float_pixels.resizeErase(v_reso, h_reso);
-                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, h_reso);
+                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
                 file.readPixels(dw.min.y, dw.max.y);
                 printf(" reading target comparison file %s having h_reso = %d v_reso = %d\n", infile2, h_reso, v_reso);
                 if (pixels == NULL)
                 {
-                    pixels = (float *)malloc(h_reso * v_reso * 12); /* 4-bytes/float * 3-colors */
+                    pixels = (float *)malloc((size_t)h_reso * (size_t)v_reso * sizeof(float) * 3); /* 4-bytes/float * 3-colors */
                 }
                 for (y = 0; y < v_reso; y++)
                 {
@@ -222,18 +223,18 @@ main(int argc, char **argv)
                     exit(1);
                 }
                 half_float_pixels.resizeErase(v_reso, h_reso);
-                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, h_reso);
+                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t) h_reso);
                 file.readPixels(dw.min.y, dw.max.y);
                 printf(" reading original file %s having h_reso = %d v_reso = %d\n", infile1, h_reso, v_reso);
             }
         } /* dpx vs exr file1 */
         if (pixels2 == NULL)
         {
-            pixels2 = (float *)malloc(h_reso * v_reso * 12); /* 4-bytes/float * 3-colors */
+            pixels2 = (float *)malloc((size_t)h_reso * (size_t)v_reso * sizeof(float) * 3); /* 4-bytes/float * 3-colors */
         }
         if (bin_value == NULL)
         {
-            bin_value = (int *)malloc(h_reso * v_reso * 12); /* 4-bytes/ing * 3-colors */
+            bin_value = (int *)malloc((size_t)h_reso * (size_t)v_reso * sizeof(int) * 3); /* 4-bytes/int * 3-colors */
         }
         for (c = 0; c < 3; c++)
         {
@@ -355,8 +356,8 @@ main(int argc, char **argv)
     printf("\n beginning second pass over frames (multiples of sigma, now that sigma for all frames has been determined)\n\n");
     for (iframe = first_frame; iframe <= last_frame; iframe++)
     {
-        sprintf(infile1, argv[1], iframe);
-        sprintf(infile2, argv[2], iframe);
+        snprintf(infile1, sizeof(infile1), argv[1], iframe);
+        snprintf(infile2, sizeof(infile2), argv[2], iframe);
         if (dpx_in_file2 == 1)
         {
             dpx_read(infile2, &pixels, &h_reso, &v_reso, 0 /*not cineon*/, 0 /*no half_flag*/);
@@ -380,7 +381,7 @@ main(int argc, char **argv)
                 RgbaInputFile file(infile2, 1);
                 Box2i dw = file.dataWindow();
                 half_float_pixels.resizeErase(v_reso, h_reso);
-                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, h_reso);
+                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
                 file.readPixels(dw.min.y, dw.max.y);
                 printf(" reading target comparison file %s having h_reso = %d v_reso = %d\n", infile2, h_reso, v_reso);
                 for (y = 0; y < v_reso; y++)
@@ -419,7 +420,7 @@ main(int argc, char **argv)
                 RgbaInputFile file(infile1, 1);
                 Box2i dw = file.dataWindow();
                 half_float_pixels.resizeErase(v_reso, h_reso);
-                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, h_reso);
+                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
                 file.readPixels(dw.min.y, dw.max.y);
                 printf(" reading original file %s having h_reso = %d v_reso = %d\n", infile1, h_reso, v_reso);
             }
