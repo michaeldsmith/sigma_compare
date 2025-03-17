@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.12)
-#include(GNUInstallDirs)
 
 set( SIGMA_COMPARE "sigma-compare")
 
-project (${SIGMA_COMPARE} DESCRIPTION "EXR comparison tool designed by Gary Demos" LANGUAGES CXX C)
+project (${SIGMA_COMPARE} DESCRIPTION "Sigma Compare - a float comparison tool, described in Gary Demos 'A Quality Metric For High Dynamic Range', SMPTE 2014 Annual Technical Conference and Exhibition" LANGUAGES CXX C)
+
+include(GNUInstallDirs)
 
 set(CMAKE_MODULE_PATH
 	"${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
@@ -54,11 +55,11 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-find_package(OpenEXR 3 CONFIG QUIET)
+find_package(OpenEXR CONFIG QUIET)
 if(OpenEXR_FOUND)
   message(STATUS "Found OpenEXR ${OpenEXR_VERSION}")
 else()
-  message(STATUS "did not find OpenEXR 3, looking for OpenEXR 2")
+  message(STATUS "did not find OpenEXR config, looking for OpenEXR 2 modules")
   find_package(IlmBase REQUIRED)
   find_package(OpenEXR 2 REQUIRED)
 endif()
