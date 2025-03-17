@@ -26,10 +26,17 @@ using namespace Imath;           /* OpenExr */
 #define NUMBER_OF_STOPS 32 // note: the 5 bit half-float exponent is limited to a range of 31 stops (value 31 = +-inf nan out-ofrange code). Note: value 0-exp denorm extends lower), Use 32-bit floating point I/O (e.g. dpx32) for ranges greater than 31 (+denorm) stops
 // Prototypes:
 void
-dpx_read(char* inname, float** pixels_read, short* width, short* height, short cineon, short half_flag)
+dpx_read(char* inname, float** pixels_read, int* width, int* height, short cineon, short half_flag)
 {
   // empty implementation
   fprintf(stderr, "dpx is not supported\n");
+  fprintf(stderr, "function args:\n");
+  fprintf(stderr, "inname = %s\n", inname);
+  fprintf(stderr, "pixels_read[0][0] = %f\n", pixels_read[0][0]);
+  fprintf(stderr, "width = %d\n", *width);
+  fprintf(stderr, "height = %d\n", *height);
+  fprintf(stderr, "cineon = %d\n", cineon);
+  fprintf(stderr, "half_flag = %d\n", half_flag);
   exit(1);
   return;
 }
@@ -37,12 +44,13 @@ dpx_read(char* inname, float** pixels_read, short* width, short* height, short c
 int
 main(int argc, char **argv)
 {
-    short x, y, c, j, k;
+    int x, y, c, k;
+    int j;
     float *pixels = NULL, *pixels2 = NULL, *pixels3 = NULL;
-    short *bin_value = NULL;
+    int *bin_value = NULL;
     char infile1[300], infile2[300];
     int iframe = 0, first_frame = 0, last_frame = 0;
-    short h_reso, v_reso;
+    int h_reso = 0, v_reso = 0;
     float col[3];
     float flt_log2;
     double square_sum_col[3][NUMBER_OF_STOPS];
@@ -79,7 +87,7 @@ main(int argc, char **argv)
     } /* argc > 4 or not */
     if (argc > 5)
     {
-        amplitude_factor = atof(argv[5]);
+        amplitude_factor = (float)atof(argv[5]);
         printf(" setting amplitude_factor to %f\n", amplitude_factor);
         /* can scale nits to unity relationship here
         e.g. if 1.0=100nits, use 100.0 here for the amplitude_factor in order to see the printout relative to nits (sigma and average value),
@@ -113,7 +121,7 @@ main(int argc, char **argv)
     {
         sprintf(infile1, argv[1], iframe);
         sprintf(infile2, argv[2], iframe);
-        short num_chars = strlen(infile1);                                                            /* length of in_file_name string */
+        short num_chars = (short) strlen(infile1);                                                            /* length of in_file_name string */
         if ((!strcmp(&infile1[num_chars - 1], "x")) || (!strcmp(&infile1[num_chars - 1], "X")) ||     /* DPX file ending in ".dpx" (not recommended,
                  10bit linear has insufficient precision near black) */
             (!strcmp(&infile1[num_chars - 3], "x32")) || (!strcmp(&infile1[num_chars - 3], "X32")) || /* dpx32 or DPX32 */
@@ -122,7 +130,7 @@ main(int argc, char **argv)
         { /* dpxhlf or DPXHLF, 16-bit half-float (nonstandard, improperly defined in dpx 2.0 standard) */
             dpx_in_file1 = 1;
         }
-        num_chars = strlen(infile2);                                                                  /* length of in_file_name string */
+        num_chars = (short) strlen(infile2);                                                                  /* length of in_file_name string */
         if ((!strcmp(&infile2[num_chars - 1], "x")) || (!strcmp(&infile2[num_chars - 1], "X")) ||     /* DPX file ending in ".dpx" (not recommended,
                  10bit linear has insufficient precision near black) */
             (!strcmp(&infile2[num_chars - 3], "x32")) || (!strcmp(&infile2[num_chars - 3], "X32")) || /* dpx32 or DPX32 */
@@ -177,7 +185,7 @@ main(int argc, char **argv)
         /**********************************************************************************************/
         if (dpx_in_file1 == 1)
         {
-            short h_reso_b, v_reso_b;
+            int h_reso_b, v_reso_b;
             dpx_read(infile1, &pixels3, &h_reso_b, &v_reso_b, 0 /*not cineon*/, 0 /*no half_flag*/);
             if ((h_reso_b != h_reso) || (v_reso_b != v_reso))
             {
@@ -204,7 +212,7 @@ main(int argc, char **argv)
             {
                 RgbaInputFile file(infile1, 1);
                 Box2i dw = file.dataWindow();
-                short h_reso_b, v_reso_b;
+                int h_reso_b, v_reso_b;
                 h_reso_b = dw.max.x - dw.min.x + 1;
                 v_reso_b = dw.max.y - dw.min.y + 1;
                 if ((h_reso_b != h_reso) || (v_reso_b != v_reso))
@@ -225,7 +233,7 @@ main(int argc, char **argv)
         }
         if (bin_value == NULL)
         {
-            bin_value = (short *)malloc(h_reso * v_reso * 6); /* 2-bytes/short * 3-colors */
+            bin_value = (int *)malloc(h_reso * v_reso * 12); /* 4-bytes/ing * 3-colors */
         }
         for (c = 0; c < 3; c++)
         {
@@ -264,8 +272,8 @@ main(int argc, char **argv)
                     }
                     else
                     { /* col[c] >= 0 */
-                        flt_log2 = log2f(MAX(1e-16, col[c]));
-                        j = flt_log2; /* float to int */
+                        flt_log2 = log2f(MAX(1e-16f, col[c]));
+                        j = (int)flt_log2; /* float to int */
                         if (flt_log2 > 0.0)
                             j = j + 1;                                                 /* must round one side of zero for continuity of integer j */
                         j = MIN(NUMBER_OF_STOPS - 1, MAX(0, j + NUMBER_OF_STOPS / 2)); /* split NUMBER_OF_STOPS half above 1.0
@@ -294,7 +302,7 @@ main(int argc, char **argv)
         if (count_neg_col[c] > 0)
         {
             square_sum_neg_col[c] = square_sum_neg_col[c] / count_neg_col[c];
-            sigma_neg_col[c] = sqrtf(square_sum_neg_col[c]);
+            sigma_neg_col[c] = sqrtf((float)square_sum_neg_col[c]);
             average_neg_col[c] = average_neg_col[c] / count_neg_col[c];
             if (c == 0)
             {
@@ -320,7 +328,7 @@ main(int argc, char **argv)
             if (count_col[c][j] > 0)
             {
                 square_sum_col[c][j] = square_sum_col[c][j] / count_col[c][j];
-                sigma_col[c][j] = sqrtf(square_sum_col[c][j]);
+                sigma_col[c][j] = sqrtf((float)square_sum_col[c][j]);
                 average_col[c][j] = average_col[c][j] / count_col[c][j];
                 // if (j == 0) { average_col[c][j] = MAX(1e-16, average_col[c][j]); /* prevent divide by zero */ }
                 if (c == 0)
@@ -389,7 +397,7 @@ main(int argc, char **argv)
             /**********************************************************************************************/
             if (dpx_in_file1 == 1)
         {
-            short h_reso_b, v_reso_b;
+            int h_reso_b, v_reso_b;
             dpx_read(infile1, &pixels3, &h_reso_b, &v_reso_b, 0 /*not cineon*/, 0 /*no half_flag*/);
             if (amplitude_factor != 1.0)
             {
@@ -451,8 +459,8 @@ main(int argc, char **argv)
                     }
                     else
                     { /* col[c] >= 0 */
-                        flt_log2 = log2f(MAX(1e-16, col[c]));
-                        j = flt_log2; /* float to int */
+                        flt_log2 = log2f(MAX(1e-16f, col[c]));
+                        j = (int)flt_log2; /* float to int */
                         if (flt_log2 > 0.0)
                             j = j + 1;                                                 /* must round one side of zero for continuity of integer j */
                         j = MIN(NUMBER_OF_STOPS - 1, MAX(0, j + NUMBER_OF_STOPS / 2)); /* split NUMBER_OF_STOPS half above 1.0
@@ -476,10 +484,10 @@ main(int argc, char **argv)
                             col_dif[c] = pixels2[(c * v_reso + y) * h_reso + x];
                             for (k = 0; k < SIGMA_MULTIPLES; k++)
                             {
-                                short multiple;
+                                int multiple;
                                 multiple = (1 << ((k >> 1) + 1));
                                 multiple = multiple + (k & 1) * (multiple >> 1); /* turns k=0,1,2,3,4,5,6,7 into multiple=2,3,4,6,8,12,16 */
-                                if (fabsf(col_dif[c]) > (multiple * sigma_col[c][j]))
+                                if (fabsf(col_dif[c]) > ((float)multiple * sigma_col[c][j]))
                                 {
                                     count_col_multiple_sigma[k][c][j] = count_col_multiple_sigma[k][c][j] + 1;
                                     if (k == (SIGMA_MULTIPLES - 1))
@@ -552,7 +560,7 @@ main(int argc, char **argv)
             } /* count_col[c][j] > 0 */
         } /* j */
     } /* c */
-    short multiple;
+    int multiple;
     for (c = 0; c < 3; c++)
     {
         printf("\n");
@@ -589,19 +597,19 @@ main(int argc, char **argv)
                     {
                         printf(" %dsigma_red[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n ",
                                multiple,
-                               j, multiple * sigma_col[c][j], multiple * sigma_col[c][j] / average_col[c][j], 100.0 * multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
+                               j, (float)multiple * sigma_col[c][j], (float)multiple * sigma_col[c][j] / average_col[c][j], 100.0 * multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                     }
                     if (c == 1)
                     {
                         printf(" %dsigma_grn[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n ",
                                multiple,
-                               j, multiple * sigma_col[c][j], multiple * sigma_col[c][j] / average_col[c][j], 100.0 * multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
+                               j, (float)multiple * sigma_col[c][j], (float)multiple * sigma_col[c][j] / average_col[c][j], 100.0 * (float)multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                     }
                     if (c == 2)
                     {
                         printf(" %dsigma_blu[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n ",
                                multiple,
-                               j, multiple * sigma_col[c][j], multiple * sigma_col[c][j] / average_col[c][j], 100.0 * multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
+                               j, (float)multiple * sigma_col[c][j], (float)multiple * sigma_col[c][j] / average_col[c][j], 100.0 * (float) multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                     }
                 } /* count_col_multiple_sigma[k][c][j] > 0 */
             } /* k */
