@@ -51,7 +51,7 @@ from the root source directory:
 
 ## Example Windows usage: ##
 
-        ./sigma-compare ../resources/test/exr/AllHalfValues.NONE.exr ../resources/test/exr/AllHalfValues.DWAA_45.exr
+        ./sigma-compare ../../resources/test/exr/AllHalfValues.NONE.exr ../../resources/test/exr/AllHalfValues.DWAA_45.exr
         
 ## Example Linux/MacOS usage: ##
 
