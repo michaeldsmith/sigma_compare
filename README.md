@@ -49,12 +49,8 @@ from the root source directory:
 
         ctest
 
-## Example Windows usage: ##
+## Example usage: ##
 
         ./sigma-compare ../../resources/test/exr/AllHalfValues.NONE.exr ../../resources/test/exr/AllHalfValues.DWAA_45.exr
         
-## Example Linux/MacOS usage: ##
-
-        .\sigma-compare ..\resources\test\exr\AllHalfValues.NONE.exr ..\resources\test\exr\AllHalfValues.DWAA_45.exr
-
         
