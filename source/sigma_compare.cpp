@@ -503,14 +503,22 @@ main(int argc, char **argv)
                 } /* x */
             } /* y */
         } /* c */
-        if (dpx_in_file1 == 1)
+        if (pixels3 != NULL)
         {
             free(pixels3);
-        } /* dpx */
-        if (dpx_in_file2 == 1)
+        } 
+        if (pixels != NULL)
         {
             free(pixels);
-        } /* dpx */
+        }
+        if(pixels2 != NULL)
+        {
+            free(pixels2);
+        }
+        if( bin_value != NULL)
+        {
+            free(bin_value);
+        }
     } /* iframe */
     printf("\n amplitude_factor = %f\n", amplitude_factor);
     for (c = 0; c < 3; c++)
