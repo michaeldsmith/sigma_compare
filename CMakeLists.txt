@@ -89,3 +89,4 @@ add_test(NAME "none-vs-zip" COMMAND ${SIGMA_COMPARE} "${PROJECT_SOURCE_DIR}/reso
 add_test(NAME "none-vs-piz" COMMAND ${SIGMA_COMPARE} "${PROJECT_SOURCE_DIR}/resources/test/exr/AllHalfValues.NONE.exr" "${PROJECT_SOURCE_DIR}/resources/test/exr/AllHalfValues.PIZ.exr")
 add_test(NAME "DWAA10-vs-none" COMMAND ${SIGMA_COMPARE} "${PROJECT_SOURCE_DIR}/resources/test/exr/AllHalfValues.DWAA_10.exr" "${PROJECT_SOURCE_DIR}/resources/test/exr/AllHalfValues.NONE.exr")
 add_test(NAME "B44-vs-none" COMMAND ${SIGMA_COMPARE} "${PROJECT_SOURCE_DIR}/resources/test/exr/AllHalfValues.B44.exr" "${PROJECT_SOURCE_DIR}/resources/test/exr/AllHalfValues.NONE.exr")
+add_test(NAME "DWAA45-vs-none-sequence" COMMAND ${SIGMA_COMPARE} "${PROJECT_SOURCE_DIR}/resources/test/exr/StillLife_crop.NONE.%07d.exr" "${PROJECT_SOURCE_DIR}/resources/test/exr/StillLife_crop.DWA45.%07d.exr" 1 2)
