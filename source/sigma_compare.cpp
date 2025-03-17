@@ -507,18 +507,6 @@ main(int argc, char **argv)
         {
             free(pixels3);
         } 
-        if (pixels != NULL)
-        {
-            free(pixels);
-        }
-        if(pixels2 != NULL)
-        {
-            free(pixels2);
-        }
-        if( bin_value != NULL)
-        {
-            free(bin_value);
-        }
     } /* iframe */
     printf("\n amplitude_factor = %f\n", amplitude_factor);
     for (c = 0; c < 3; c++)
@@ -649,4 +637,18 @@ average_col[c][j], 100.0 * furthest_outlier_avg[c][j] / average_col[c][j], avera
             } /* (count_col_multiple_sigma[k][c][j] > 0) */
         } /* j */
     } /* c */
+
+    if (pixels != NULL)
+    {
+        free(pixels);
+    }
+    if(pixels2 != NULL)
+    {
+        free(pixels2);
+    }
+    if( bin_value != NULL)
+    {
+        free(bin_value);
+    }
+
 } /* main */
