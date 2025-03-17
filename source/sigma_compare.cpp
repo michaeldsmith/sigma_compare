@@ -418,19 +418,19 @@ int main(int argc, char **argv)
             {
                 if (c == 0)
                 {
-                    printf(" sigma_red[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels\n",
+                    printf("  sigma_red[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels\n",
                            j, sigma_col[c][j], sigma_col[c][j] / average_col[c][j], 100.0 * sigma_col[c][j] / average_col[c][j], average_col[c][j],
                            count_col[c][j]);
                 }
                 if (c == 1)
                 {
-                    printf(" sigma_grn[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels\n",
+                    printf("  sigma_grn[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels\n",
                            j, sigma_col[c][j], sigma_col[c][j] / average_col[c][j], 100.0 * sigma_col[c][j] / average_col[c][j], average_col[c][j],
                            count_col[c][j]);
                 }
                 if (c == 2)
                 {
-                    printf(" sigma_blu[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels\n",
+                    printf("  sigma_blu[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels\n",
                            j, sigma_col[c][j], sigma_col[c][j] / average_col[c][j], 100.0 * sigma_col[c][j] / average_col[c][j], average_col[c][j],
                            count_col[c][j]);
                 }
@@ -443,19 +443,19 @@ int main(int argc, char **argv)
                     multiple = multiple + (k & 1) * (multiple >> 1); /* turns k=0,1,2,3,4,5,6,7 into multiple=2,3,4,6,8,12,16 */
                     if (c == 0)
                     {
-                        printf(" %dsigma_red[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n ",
+                        printf(" %dsigma_red[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n",
                                multiple,
                                j, (float)multiple * sigma_col[c][j], (float)multiple * sigma_col[c][j] / average_col[c][j], 100.0 * multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                     }
                     if (c == 1)
                     {
-                        printf(" %dsigma_grn[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n ",
+                        printf(" %dsigma_grn[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n",
                                multiple,
                                j, (float)multiple * sigma_col[c][j], (float)multiple * sigma_col[c][j] / average_col[c][j], 100.0 * (float)multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                     }
                     if (c == 2)
                     {
-                        printf(" %dsigma_blu[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n ",
+                        printf(" %dsigma_blu[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n",
                                multiple,
                                j, (float)multiple * sigma_col[c][j], (float)multiple * sigma_col[c][j] / average_col[c][j], 100.0 * (float)multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                     }
