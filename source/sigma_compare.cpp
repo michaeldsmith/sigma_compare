@@ -7,7 +7,7 @@
 /* use at your own risk */
 // to build:
 /*
-g++ sigma_compare.cpp dpx_file_io.cpp -o sigma_compare_linux -lpthread \
+g++ sigma_compare.cpp -o sigma_compare_linux -lpthread \
 -I /usr/local/include/OpenEXR \
 /usr/local/lib/libHalf.a /usr/local/lib/libIlmImf.a /usr/local/lib/libIex.a /usr/local/lib/libIlmThread.a \
 /usr/local/lib/libz.a -m64 -O1
@@ -23,30 +23,14 @@ using namespace Imf;             /* OpenExr */
 using namespace Imath;           /* OpenExr */
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define NUMBER_OF_STOPS 32 // note: the 5 bit half-float exponent is limited to a range of 31 stops (value 31 = +-inf nan out-ofrange code). Note: value 0-exp denorm extends lower), Use 32-bit floating point I/O (e.g. dpx32) for ranges greater than 31 (+denorm) stops
-// Prototypes:
-void
-dpx_read(char* inname, float** pixels_read, int* width, int* height, short cineon, short half_flag)
-{
-  // empty implementation
-  fprintf(stderr, "dpx is not supported\n");
-  fprintf(stderr, "function args:\n");
-  fprintf(stderr, "inname = %s\n", inname);
-  fprintf(stderr, "pixels_read[0][0] = %f\n", pixels_read[0][0]);
-  fprintf(stderr, "width = %d\n", *width);
-  fprintf(stderr, "height = %d\n", *height);
-  fprintf(stderr, "cineon = %d\n", cineon);
-  fprintf(stderr, "half_flag = %d\n", half_flag);
-  exit(1);
-  return;
-}
+#define NUMBER_OF_STOPS 32 // note: the 5 bit half-float exponent is limited to a range of 31 stops (value 31 = +-inf nan out-ofrange code). Note: value 0-exp denorm extends lower), Use 32-bit floating point I/O (e.g. exr32) for ranges greater than 31 (+denorm) stops
+
 /***********************************************************************************************************/
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     int x, y, c, k;
     int j;
-    float *pixels = NULL, *pixels2 = NULL, *pixels3 = NULL;
+    float *pixels = NULL, *pixels2 = NULL;
     int *bin_value = NULL;
 #define FILEPATH_MAX 300
     char infile1[FILEPATH_MAX], infile2[FILEPATH_MAX];
@@ -67,9 +51,8 @@ main(int argc, char **argv)
     double average_neg_col[3];
     double square_sum_neg_col[3];
     float sigma_neg_col[3];
-    short dpx_in_file1 = 0, dpx_in_file2 = 0;
     float amplitude_factor;
-    Array2D<Rgba> half_float_pixels; /* unused if both input files are dpx */
+    Array2D<Rgba> half_float_pixels;
     if (argc <= 2)
     {
         printf(" usage: %s original_files, test_comparison_files, first_frame, last_frame, amplitude_factor\n", argv[0]);
@@ -120,114 +103,49 @@ main(int argc, char **argv)
     } /* c */
     for (iframe = first_frame; iframe <= last_frame; iframe++)
     {
-        snprintf(infile1, sizeof(infile1),argv[1], iframe);
-        snprintf(infile2, sizeof(infile2),argv[2], iframe);
-        short num_chars = (short) strlen(infile1);                                                            /* length of in_file_name string */
-        if ((!strcmp(&infile1[num_chars - 1], "x")) || (!strcmp(&infile1[num_chars - 1], "X")) ||     /* DPX file ending in ".dpx" (not recommended,
-                 10bit linear has insufficient precision near black) */
-            (!strcmp(&infile1[num_chars - 3], "x32")) || (!strcmp(&infile1[num_chars - 3], "X32")) || /* dpx32 or DPX32 */
-            (!strcmp(&infile1[num_chars - 3], "x16")) || (!strcmp(&infile1[num_chars - 3], "X16")) || /* dpx16 or DPX16 (not recommended) */
-            (!strcmp(&infile1[num_chars - 4], "xhlf")) || (!strcmp(&infile1[num_chars - 4], "XHLF")))
-        { /* dpxhlf or DPXHLF, 16-bit half-float (nonstandard, improperly defined in dpx 2.0 standard) */
-            dpx_in_file1 = 1;
-        }
-        num_chars = (short) strlen(infile2);                                                                  /* length of in_file_name string */
-        if ((!strcmp(&infile2[num_chars - 1], "x")) || (!strcmp(&infile2[num_chars - 1], "X")) ||     /* DPX file ending in ".dpx" (not recommended,
-                 10bit linear has insufficient precision near black) */
-            (!strcmp(&infile2[num_chars - 3], "x32")) || (!strcmp(&infile2[num_chars - 3], "X32")) || /* dpx32 or DPX32 */
-            (!strcmp(&infile2[num_chars - 3], "x16")) || (!strcmp(&infile2[num_chars - 3], "X16")) || /* dpx16 or DPX16 (not recommended) */
-            (!strcmp(&infile2[num_chars - 4], "xhlf")) || (!strcmp(&infile2[num_chars - 4], "XHLF")))
-        { /* dpxhlf or DPXHLF, 16-bit half-float (nonstandard, improperly defined in dpx 2.0 standard) */
-            dpx_in_file2 = 1;
-        }
-        if (dpx_in_file2 == 1)
-        {
-            dpx_read(infile2, &pixels, &h_reso, &v_reso, 0 /*not cineon*/, 0 /*no half_flag*/);
-            if (amplitude_factor != 1.0)
+        snprintf(infile1, sizeof(infile1), argv[1], iframe);
+        snprintf(infile2, sizeof(infile2), argv[2], iframe);
+        { /* read exr file 2 */
+            RgbaInputFile file(infile2, 1);
+            Box2i dw = file.dataWindow();
+            h_reso = dw.max.x - dw.min.x + 1;
+            v_reso = dw.max.y - dw.min.y + 1;
+            half_float_pixels.resizeErase(v_reso, h_reso);
+            file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
+            file.readPixels(dw.min.y, dw.max.y);
+            printf(" reading target comparison file %s having h_reso = %d v_reso = %d\n", infile2, h_reso, v_reso);
+            if (pixels == NULL)
             {
-                for (c = 0; c < 3; c++)
-                {
-                    for (y = 0; y < v_reso; y++)
-                    {
-                        for (x = 0; x < h_reso; x++)
-                        {
-                            pixels[(c * v_reso + y) * h_reso + x] = amplitude_factor * pixels[(c * v_reso + y) * h_reso + x];
-                        } /* x */
-                    } /* y */
-                } /* c */
-            } /* amplitude_factor != 1.0 */
-        }
-        else
-        { /* exr */
-            {
-                RgbaInputFile file(infile2, 1);
-                Box2i dw = file.dataWindow();
-                h_reso = dw.max.x - dw.min.x + 1;
-                v_reso = dw.max.y - dw.min.y + 1;
-                half_float_pixels.resizeErase(v_reso, h_reso);
-                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
-                file.readPixels(dw.min.y, dw.max.y);
-                printf(" reading target comparison file %s having h_reso = %d v_reso = %d\n", infile2, h_reso, v_reso);
-                if (pixels == NULL)
-                {
-                    pixels = (float *)malloc((size_t)h_reso * (size_t)v_reso * sizeof(float) * 3); /* 4-bytes/float * 3-colors */
-                }
-                for (y = 0; y < v_reso; y++)
-                {
-                    for (x = 0; x < h_reso; x++)
-                    {
-                        pixels[(0 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].r;
-                        pixels[(1 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].g;
-                        pixels[(2 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].b;
-                    } /* x */
-                } /* y */
+                pixels = (float *)malloc((size_t)h_reso * (size_t)v_reso * sizeof(float) * 3); /* 4-bytes/float * 3-colors */
             }
-        } /* dpx vs exr */
+            for (y = 0; y < v_reso; y++)
+            {
+                for (x = 0; x < h_reso; x++)
+                {
+                    pixels[(0 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].r;
+                    pixels[(1 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].g;
+                    pixels[(2 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].b;
+                } /* x */
+            } /* y */
+        } /* read exr file 2 */
         /**********************************************************************************************/
-        if (dpx_in_file1 == 1)
-        {
+        { /* read exr file 1 */
+            RgbaInputFile file(infile1, 1);
+            Box2i dw = file.dataWindow();
             int h_reso_b, v_reso_b;
-            dpx_read(infile1, &pixels3, &h_reso_b, &v_reso_b, 0 /*not cineon*/, 0 /*no half_flag*/);
+            h_reso_b = dw.max.x - dw.min.x + 1;
+            v_reso_b = dw.max.y - dw.min.y + 1;
             if ((h_reso_b != h_reso) || (v_reso_b != v_reso))
             {
                 printf(" error, file resolutions do not match, infile1 h_reso = %d v_reso = %d, infile2 h_reso = %d v_reso = %d, aborting\n",
                        h_reso, v_reso, h_reso_b, v_reso_b);
                 exit(1);
             }
-            if (amplitude_factor != 1.0)
-            {
-                for (c = 0; c < 3; c++)
-                {
-                    for (y = 0; y < v_reso; y++)
-                    {
-                        for (x = 0; x < h_reso; x++)
-                        {
-                            pixels3[(c * v_reso + y) * h_reso + x] = amplitude_factor * pixels3[(c * v_reso + y) * h_reso + x];
-                        } /* x */
-                    } /* y */
-                } /* c */
-            } /* amplitude_factor != 1.0 */
-        }
-        else
-        { /* exr */
-            {
-                RgbaInputFile file(infile1, 1);
-                Box2i dw = file.dataWindow();
-                int h_reso_b, v_reso_b;
-                h_reso_b = dw.max.x - dw.min.x + 1;
-                v_reso_b = dw.max.y - dw.min.y + 1;
-                if ((h_reso_b != h_reso) || (v_reso_b != v_reso))
-                {
-                    printf(" error, file resolutions do not match, infile1 h_reso = %d v_reso = %d, infile2 h_reso = %d v_reso = %d, aborting\n",
-                           h_reso, v_reso, h_reso_b, v_reso_b);
-                    exit(1);
-                }
-                half_float_pixels.resizeErase(v_reso, h_reso);
-                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t) h_reso);
-                file.readPixels(dw.min.y, dw.max.y);
-                printf(" reading original file %s having h_reso = %d v_reso = %d\n", infile1, h_reso, v_reso);
-            }
-        } /* dpx vs exr file1 */
+            half_float_pixels.resizeErase(v_reso, h_reso);
+            file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
+            file.readPixels(dw.min.y, dw.max.y);
+            printf(" reading original file %s having h_reso = %d v_reso = %d\n", infile1, h_reso, v_reso);
+        } /* read exr file 1 */
         if (pixels2 == NULL)
         {
             pixels2 = (float *)malloc((size_t)h_reso * (size_t)v_reso * sizeof(float) * 3); /* 4-bytes/float * 3-colors */
@@ -242,25 +160,18 @@ main(int argc, char **argv)
             {
                 for (x = 0; x < h_reso; x++)
                 {
-                    if (dpx_in_file1 == 1)
+                    if (c == 0)
                     {
-                        col[c] = pixels3[(c * v_reso + y) * h_reso + x];
+                        col[c] = amplitude_factor * half_float_pixels[y][x].r;
                     }
-                    else
-                    { /* exr */
-                        if (c == 0)
-                        {
-                            col[c] = amplitude_factor * half_float_pixels[y][x].r;
-                        }
-                        if (c == 1)
-                        {
-                            col[c] = amplitude_factor * half_float_pixels[y][x].g;
-                        }
-                        if (c == 2)
-                        {
-                            col[c] = amplitude_factor * half_float_pixels[y][x].b;
-                        }
-                    } /* dpx vs exr */
+                    if (c == 1)
+                    {
+                        col[c] = amplitude_factor * half_float_pixels[y][x].g;
+                    }
+                    if (c == 2)
+                    {
+                        col[c] = amplitude_factor * half_float_pixels[y][x].b;
+                    }
                     /* store difference from original in pixels2 */
                     col_dif[c] = col[c] - pixels[(c * v_reso + y) * h_reso + x];
                     pixels2[(c * v_reso + y) * h_reso + x] = col_dif[c];
@@ -287,14 +198,6 @@ main(int argc, char **argv)
                 } /* x */
             } /* y */
         } /* c */
-        if (dpx_in_file1 == 1)
-        {
-            free(pixels3);
-        } /* dpx */
-        if (dpx_in_file2 == 1)
-        {
-            free(pixels);
-        } /* dpx */
     } /* iframe */
     printf("\n amplitude_factor = %f\n", amplitude_factor);
     for (c = 0; c < 3; c++)
@@ -358,73 +261,32 @@ main(int argc, char **argv)
     {
         snprintf(infile1, sizeof(infile1), argv[1], iframe);
         snprintf(infile2, sizeof(infile2), argv[2], iframe);
-        if (dpx_in_file2 == 1)
-        {
-            dpx_read(infile2, &pixels, &h_reso, &v_reso, 0 /*not cineon*/, 0 /*no half_flag*/);
-            if (amplitude_factor != 1.0)
+        { /* read exr file 2 */
+            RgbaInputFile file(infile2, 1);
+            Box2i dw = file.dataWindow();
+            half_float_pixels.resizeErase(v_reso, h_reso);
+            file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
+            file.readPixels(dw.min.y, dw.max.y);
+            printf(" reading target comparison file %s having h_reso = %d v_reso = %d\n", infile2, h_reso, v_reso);
+            for (y = 0; y < v_reso; y++)
             {
-                for (c = 0; c < 3; c++)
+                for (x = 0; x < h_reso; x++)
                 {
-                    for (y = 0; y < v_reso; y++)
-                    {
-                        for (x = 0; x < h_reso; x++)
-                        {
-                            pixels[(c * v_reso + y) * h_reso + x] = amplitude_factor * pixels[(c * v_reso + y) * h_reso + x];
-                        } /* x */
-                    } /* y */
-                } /* c */
-            } /* amplitude_factor != 1.0 */
-        }
-        else
-        { /* exr */
-            {
-                RgbaInputFile file(infile2, 1);
-                Box2i dw = file.dataWindow();
-                half_float_pixels.resizeErase(v_reso, h_reso);
-                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
-                file.readPixels(dw.min.y, dw.max.y);
-                printf(" reading target comparison file %s having h_reso = %d v_reso = %d\n", infile2, h_reso, v_reso);
-                for (y = 0; y < v_reso; y++)
-                {
-                    for (x = 0; x < h_reso; x++)
-                    {
-                        pixels[(0 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].r;
-                        pixels[(1 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].g;
-                        pixels[(2 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].b;
-                    } /* x */
-                } /* y */
-            }
-        } /* dpx vs exr */
-            /**********************************************************************************************/
-            if (dpx_in_file1 == 1)
-        {
-            int h_reso_b, v_reso_b;
-            dpx_read(infile1, &pixels3, &h_reso_b, &v_reso_b, 0 /*not cineon*/, 0 /*no half_flag*/);
-            if (amplitude_factor != 1.0)
-            {
-                for (c = 0; c < 3; c++)
-                {
-                    for (y = 0; y < v_reso; y++)
-                    {
-                        for (x = 0; x < h_reso; x++)
-                        {
-                            pixels3[(c * v_reso + y) * h_reso + x] = amplitude_factor * pixels3[(c * v_reso + y) * h_reso + x];
-                        } /* x */
-                    } /* y */
-                } /* c */
-            } /* amplitude_factor != 1.0 */
-        }
-        else
-        { /* exr */
-            {
-                RgbaInputFile file(infile1, 1);
-                Box2i dw = file.dataWindow();
-                half_float_pixels.resizeErase(v_reso, h_reso);
-                file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
-                file.readPixels(dw.min.y, dw.max.y);
-                printf(" reading original file %s having h_reso = %d v_reso = %d\n", infile1, h_reso, v_reso);
-            }
-        } /* dpx vs exr file1 */
+                    pixels[(0 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].r;
+                    pixels[(1 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].g;
+                    pixels[(2 * v_reso + y) * h_reso + x] = amplitude_factor * half_float_pixels[y][x].b;
+                } /* x */
+            } /* y */
+        } /* read exr file 2 */
+        /**********************************************************************************************/
+        { /* read exr file 1 */
+            RgbaInputFile file(infile1, 1);
+            Box2i dw = file.dataWindow();
+            half_float_pixels.resizeErase(v_reso, h_reso);
+            file.setFrameBuffer(&half_float_pixels[0][0] - dw.min.x - dw.min.y * h_reso, 1, (size_t)h_reso);
+            file.readPixels(dw.min.y, dw.max.y);
+            printf(" reading original file %s having h_reso = %d v_reso = %d\n", infile1, h_reso, v_reso);
+        } /* read exr file 1 */
         /* recompute pixels2 and bin_value */
         for (c = 0; c < 3; c++)
         {
@@ -432,25 +294,18 @@ main(int argc, char **argv)
             {
                 for (x = 0; x < h_reso; x++)
                 {
-                    if (dpx_in_file1 == 1)
+                    if (c == 0)
                     {
-                        col[c] = pixels3[(c * v_reso + y) * h_reso + x];
+                        col[c] = amplitude_factor * half_float_pixels[y][x].r;
                     }
-                    else
-                    { /* exr */
-                        if (c == 0)
-                        {
-                            col[c] = amplitude_factor * half_float_pixels[y][x].r;
-                        }
-                        if (c == 1)
-                        {
-                            col[c] = amplitude_factor * half_float_pixels[y][x].g;
-                        }
-                        if (c == 2)
-                        {
-                            col[c] = amplitude_factor * half_float_pixels[y][x].b;
-                        }
-                    } /* dpx vs exr */
+                    if (c == 1)
+                    {
+                        col[c] = amplitude_factor * half_float_pixels[y][x].g;
+                    }
+                    if (c == 2)
+                    {
+                        col[c] = amplitude_factor * half_float_pixels[y][x].b;
+                    }
                     /* store difference from original in pixels2 */
                     col_dif[c] = col[c] - pixels[(c * v_reso + y) * h_reso + x];
                     pixels2[(c * v_reso + y) * h_reso + x] = col_dif[c];
@@ -493,8 +348,8 @@ main(int argc, char **argv)
                                     count_col_multiple_sigma[k][c][j] = count_col_multiple_sigma[k][c][j] + 1;
                                     if (k == (SIGMA_MULTIPLES - 1))
                                     {
-                                            // printf(" c=%d j=%d x=%d y=%d col_dif[%d]=%e\n", c, j, x, y, c, col_dif[c]);
-                                            furthest_outlier_avg[c][j] = furthest_outlier_avg[c][j] + fabsf(col_dif[c]);
+                                        // printf(" c=%d j=%d x=%d y=%d col_dif[%d]=%e\n", c, j, x, y, c, col_dif[c]);
+                                        furthest_outlier_avg[c][j] = furthest_outlier_avg[c][j] + fabsf(col_dif[c]);
                                     } /* k== (SIGMA_MULTIPLES-1) */
                                 } /* fabsf(col_dif[c]) > (multiple * sigma_col[c][j]) */
                             } /* k */
@@ -503,10 +358,6 @@ main(int argc, char **argv)
                 } /* x */
             } /* y */
         } /* c */
-        if (pixels3 != NULL)
-        {
-            free(pixels3);
-        } 
     } /* iframe */
     printf("\n amplitude_factor = %f\n", amplitude_factor);
     for (c = 0; c < 3; c++)
@@ -606,7 +457,7 @@ main(int argc, char **argv)
                     {
                         printf(" %dsigma_blu[%d] = %e self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n ",
                                multiple,
-                               j, (float)multiple * sigma_col[c][j], (float)multiple * sigma_col[c][j] / average_col[c][j], 100.0 * (float) multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
+                               j, (float)multiple * sigma_col[c][j], (float)multiple * sigma_col[c][j] / average_col[c][j], 100.0 * (float)multiple * sigma_col[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j], (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                     }
                 } /* count_col_multiple_sigma[k][c][j] > 0 */
             } /* k */
@@ -617,22 +468,22 @@ main(int argc, char **argv)
                 multiple = (1 << ((k >> 1) + 1));
                 multiple = multiple + (k & 1) * (multiple >> 1); /* turns k=0,1,2,3,4,5,6,7 into multiple=2,3,4,6,8,12,16 */
                 if (c == 0)
-                { printf(" beyond %dsigma_red[%d] furthest_outlier_avg dif = %e which is %f sigma (sigma being %e), self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n",
-multiple, j, furthest_outlier_avg[c][j], furthest_outlier_avg[c][j] / sigma_col[c][j], sigma_col[c][j], furthest_outlier_avg[c][j] /
-average_col[c][j], 100.0 * furthest_outlier_avg[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j],
-(count_col_multiple_sigma[k][c][j] * 100.0)/(1.0 * count_col[c][j]), count_col[c][j]);
+                {
+                    printf(" beyond %dsigma_red[%d] furthest_outlier_avg dif = %e which is %f sigma (sigma being %e), self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n",
+                           multiple, j, furthest_outlier_avg[c][j], furthest_outlier_avg[c][j] / sigma_col[c][j], sigma_col[c][j], furthest_outlier_avg[c][j] / average_col[c][j], 100.0 * furthest_outlier_avg[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j],
+                           (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                 }
                 if (c == 1)
-                { printf(" beyond %dsigma_grn[%d] furthest_outlier_avg dif = %e which is %f sigma (sigma being %e), self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n",
-multiple, j, furthest_outlier_avg[c][j], furthest_outlier_avg[c][j] / sigma_col[c][j], sigma_col[c][j], furthest_outlier_avg[c][j] /
-average_col[c][j], 100.0 * furthest_outlier_avg[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j],
-(count_col_multiple_sigma[k][c][j] * 100.0)/(1.0 * count_col[c][j]), count_col[c][j]);
+                {
+                    printf(" beyond %dsigma_grn[%d] furthest_outlier_avg dif = %e which is %f sigma (sigma being %e), self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n",
+                           multiple, j, furthest_outlier_avg[c][j], furthest_outlier_avg[c][j] / sigma_col[c][j], sigma_col[c][j], furthest_outlier_avg[c][j] / average_col[c][j], 100.0 * furthest_outlier_avg[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j],
+                           (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                 }
                 if (c == 2)
-                { printf(" beyond %dsigma_blu[%d] furthest_outlier_avg dif = %e which is %f sigma (sigma being %e), self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n",
-multiple, j, furthest_outlier_avg[c][j], furthest_outlier_avg[c][j] / sigma_col[c][j], sigma_col[c][j], furthest_outlier_avg[c][j] /
-average_col[c][j], 100.0 * furthest_outlier_avg[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j],
-(count_col_multiple_sigma[k][c][j] * 100.0)/(1.0 * count_col[c][j]), count_col[c][j]);
+                {
+                    printf(" beyond %dsigma_blu[%d] furthest_outlier_avg dif = %e which is %f sigma (sigma being %e), self_relative = %f (%f%%) at average value = %e for %.0f pixels which is %f %% of the %.0f pixels within a stop of this value\n",
+                           multiple, j, furthest_outlier_avg[c][j], furthest_outlier_avg[c][j] / sigma_col[c][j], sigma_col[c][j], furthest_outlier_avg[c][j] / average_col[c][j], 100.0 * furthest_outlier_avg[c][j] / average_col[c][j], average_col[c][j], count_col_multiple_sigma[k][c][j],
+                           (count_col_multiple_sigma[k][c][j] * 100.0) / (1.0 * count_col[c][j]), count_col[c][j]);
                 }
             } /* (count_col_multiple_sigma[k][c][j] > 0) */
         } /* j */
@@ -642,11 +493,11 @@ average_col[c][j], 100.0 * furthest_outlier_avg[c][j] / average_col[c][j], avera
     {
         free(pixels);
     }
-    if(pixels2 != NULL)
+    if (pixels2 != NULL)
     {
         free(pixels2);
     }
-    if( bin_value != NULL)
+    if (bin_value != NULL)
     {
         free(bin_value);
     }
